@@ -12,8 +12,8 @@ public class SQLAccess {
 	public SQLAccess() {
 		try {
 			DriverManager.registerDriver(new oracle.jdbc.OracleDriver());
-			String url = "jdbc:oracle:thin:@oracle11g.in.htwg-konstanz.de:1521:ora11g"; // String für DB-Connection
-			conn = DriverManager.getConnection(url, "", ""); 						// Verbindung erstellen
+			String url = "jdbc:oracle:thin:@oracle11g.in.htwg-konstanz.de:1521:ora11g"; // String fï¿½r DB-Connection
+			conn = DriverManager.getConnection(url, "dbsys45", "dbsys45"); 						// Verbindung erstellen
 
 			conn.setTransactionIsolation(conn.TRANSACTION_SERIALIZABLE); 				// Transaction Isolations-Level setzen
 			conn.setAutoCommit(false);
@@ -38,6 +38,18 @@ public class SQLAccess {
 	{
 		try {
 			conn.rollback();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public void execute(String SQLStatement)
+	{
+		try {
+		Statement stmt = conn.createStatement();
+		
+			stmt.execute(SQLStatement);
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

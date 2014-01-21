@@ -3,9 +3,11 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.Date;
 import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Vector;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -21,9 +23,18 @@ public class Gui extends JFrame implements ActionListener, TableModel, ChangeLis
 
 	private class cWohnung
 	{
+		public cWohnung(int inPK, String inName, String inLand, int inZimmer, int inQm){
+			PK = inPK;
+			Name = inName;
+			Land = inLand;
+			Zimmer = inZimmer;
+			Qm = inQm;
+		}
 		public int PK;
 		public String Name;
 		public String Land;
+		public int Zimmer;
+		public int Qm;
 	}
 	
 	private List<cWohnung> Data = new LinkedList<cWohnung>();
@@ -79,14 +90,15 @@ public class Gui extends JFrame implements ActionListener, TableModel, ChangeLis
 	JButton btnRent;
 	
 	JTable tblResults;
-	//SQLAccess con = new SQLAccess();
+	SQLAccess con = new SQLAccess();
 	
 	public Gui() {
 		lblLand = new JLabel("Land:");
 		cboCountry = new JComboBox<cLand>();
 		
 		lblSlider = new JLabel("Minimale Anzahl an Zimmer");
-		JSlider sldMinimumRooms = new JSlider(0,15);
+		sldMinimumRooms = new JSlider(0,15);
+		sldMinimumRooms.setValue(2);
 		
 		lblDateStart = new JLabel("Startdatum");
 		txtDateStart = new JTextField();
@@ -169,36 +181,37 @@ public class Gui extends JFrame implements ActionListener, TableModel, ChangeLis
 		txtDateStart.addActionListener(this);
 		txtDateEnd.addActionListener(this);
 		lstFeature.addListSelectionListener(this);
+		btnRent.addActionListener(this);
 	}
 	
 	private void loadFeature()
 	{
-		cFeature[] nf = new cFeature[4];
-		nf[0] = new cFeature("Sauna", 1);
-		nf[1] = new cFeature("Garage", 2);
-		nf[2] = new cFeature("Strom", 3);
-		nf[3] = new cFeature("Wasser", 4);
-		
-		lstFeature.setListData(nf);
+		java.sql.ResultSet res = con.getData("SELECT ID,Beschreibung FROM dbsys25.Ausstattung");
+		try {
+			Vector<cFeature> liste = new Vector<Gui.cFeature>();
+			while(res.next()){
+				cFeature feature = new cFeature(res.getString("Beschreibung"),res.getInt("ID"));
+				liste.add(feature);
+			}
+			lstFeature.setListData(liste);	
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	private void LoadLand()
 	{
-		/*java.sql.ResultSet res = con.getData("SELECT Name FROM tblLand");
+		java.sql.ResultSet res = con.getData("SELECT ID,Name FROM dbsys25.Land");
 		try {
 			while(res.next()){
-				cboCountry.addItem(res.getString("Name"));
+				cLand country = new cLand(res.getString("Name"),res.getInt("ID"));
+				cboCountry.addItem(country);
 			}
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}*/
-		cLand country = new cLand("a",1);
-		cboCountry.addItem(country);
-		country = new cLand("b",2);
-		cboCountry.addItem(country);
-		country = new cLand("c",3);
-		cboCountry.addItem(country);
+		}
 	}
 
 	public static void main(String[] args) {
@@ -210,28 +223,60 @@ public class Gui extends JFrame implements ActionListener, TableModel, ChangeLis
 	
 	private void reloadResults()
 	{
-		//Data.clear();
+		Data.clear();
+		String SQLStatement = "SELECT  dbsys25.Ferienwohnung.ID,Quadratmeter,dbsys25.Ferienwohnung.Name,Zimmer"+
+" FROM    dbsys25.Ferienwohnung"+
+" LEFT JOIN (SELECT * FROM dbsys25.Buchung WHERE Von < '" + txtDateStart.getText() + "' AND Von+Dauer > '" +txtDateEnd.getText() +"') Buchung"+
+" ON      Ferienwohnung.ID = Buchung.ferienwohnung_id"+
+" INNER JOIN dbsys25.ferienwohnung_ausstattung"+
+" ON      Ferienwohnung.ID = ferienwohnung_ausstattung.Ferienwohnung_ID"+
+" INNER JOIN dbsys25.Land"+
+" ON      Land_ID = Land.ID"+
+" INNER JOIN dbsys25.Ausstattung"+
+" ON      ferienwohnung_ausstattung.Ausstattung_ID = Ausstattung.ID"+
+" WHERE   Land.Name = '" + cboCountry.getItemAt(cboCountry.getSelectedIndex()).Land + "'"+
+" AND     Buchung.ID IS NULL" +
+" AND Ferienwohnung.Zimmer >= " + sldMinimumRooms.getValue();
+
+for(Object f : lstFeature.getSelectedValues())
+{
+	SQLStatement += " AND     ausstattung.beschreibung = '" + f.toString() + "'"; 
+}
+
+
+		System.out.println(SQLStatement);
+		try {
+		java.sql.ResultSet res = con.getData(SQLStatement);
+			if(res != null)
+			{
+			while(res.next()){
+				cWohnung wohnung = new cWohnung(res.getInt("ID"), res.getString("Name"), cboCountry.getSelectedItem().toString(),res.getInt("Zimmer"),res.getInt("Quadratmeter"));
+				Data.add(wohnung);
+			}
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+
+		}
 		
-		cWohnung nw = new cWohnung();
-		nw.PK = Data.size()+1;
-		nw.Name = "Name";
-		nw.Land = "De";
-		Data.add(nw);
-		
-		//tblResults.set
+
 		notifyTbl();
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		if(e.getSource() == btnSearch)
+		if(e.getSource() == btnRent)
 		{
-			this.removeAll();
-			//SQL Load Lists
+			int Dauer = 0;
 			
-		}
-		else
-		{
+			long start = (txtDateStart.getText());
+			long End = Date.parse(txtDateEnd.getText());
+			
+			Dauer = (int) (End-start)/(24*3599);
+			
+			String SQLStatement = "INSERT dbsys25.Buchung (Dauer,Von,Kunde_ID,Ferienwohnung_ID) VALUES(" + Dauer + ",'" + txtDateStart.getText() + "',1," + Data.get(tblResults.getSelectedColumn()).PK + ")";
+			System.out.println(SQLStatement);
+			con.execute(SQLStatement);
 			
 		}
 	}
@@ -260,10 +305,10 @@ public class Gui extends JFrame implements ActionListener, TableModel, ChangeLis
 	@Override
 	public int getColumnCount() {
 
-		return 3;
+		return 5;
 	}
 
-	String[] Columns = {"PK","Name","Land"};
+	String[] Columns = {"PK","Name","Land","Zimmer","Quadratmeter"};
 	
 	@Override
 	public String getColumnName(int columnIndex) {
@@ -293,6 +338,13 @@ public class Gui extends JFrame implements ActionListener, TableModel, ChangeLis
 		case 2:
 			retVal = wohnung.Land;
 			break;
+			
+		case 3:
+			retVal = ""+wohnung.Zimmer;
+			break;
+		case 4:
+			retVal = ""+wohnung.Qm;
+			break;
 		}
 		
 		return retVal;
@@ -318,6 +370,7 @@ public class Gui extends JFrame implements ActionListener, TableModel, ChangeLis
 
 	@Override
 	public void valueChanged(ListSelectionEvent e) {
+		lblSlider.setText(""+sldMinimumRooms.getValue());
 		reloadResults();
 		
 	}
