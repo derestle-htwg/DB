@@ -5,6 +5,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.Date;
 import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Vector;
@@ -186,7 +188,7 @@ public class Gui extends JFrame implements ActionListener, TableModel, ChangeLis
 	
 	private void loadFeature()
 	{
-		java.sql.ResultSet res = con.getData("SELECT ID,Beschreibung FROM dbsys25.Ausstattung");
+		java.sql.ResultSet res = con.getData("SELECT ID,Beschreibung FROM dbsys36.Ausstattung");
 		try {
 			Vector<cFeature> liste = new Vector<Gui.cFeature>();
 			while(res.next()){
@@ -202,7 +204,7 @@ public class Gui extends JFrame implements ActionListener, TableModel, ChangeLis
 	
 	private void LoadLand()
 	{
-		java.sql.ResultSet res = con.getData("SELECT ID,Name FROM dbsys25.Land");
+		java.sql.ResultSet res = con.getData("SELECT ID,Name FROM dbsys36.Land");
 		try {
 			while(res.next()){
 				cLand country = new cLand(res.getString("Name"),res.getInt("ID"));
@@ -224,24 +226,66 @@ public class Gui extends JFrame implements ActionListener, TableModel, ChangeLis
 	private void reloadResults()
 	{
 		Data.clear();
-		String SQLStatement = "SELECT  dbsys25.Ferienwohnung.ID,Quadratmeter,dbsys25.Ferienwohnung.Name,Zimmer"+
-" FROM    dbsys25.Ferienwohnung"+
-" LEFT JOIN (SELECT * FROM dbsys25.Buchung WHERE Von < '" + txtDateStart.getText() + "' AND Von+Dauer > '" +txtDateEnd.getText() +"') Buchung"+
+		/*String SQLStatement = "SELECT DISTINCT dbsys36.Ferienwohnung.ID,Quadratmeter,dbsys36.Ferienwohnung.Name,Zimmer"+
+" FROM    dbsys36.Ferienwohnung"+
+" LEFT JOIN (SELECT * FROM dbsys36.Buchung WHERE Von < '" + txtDateStart.getText() + "' AND Von+Dauer > '" +txtDateEnd.getText() +"') Buchung"+
 " ON      Ferienwohnung.ID = Buchung.ferienwohnung_id"+
-" INNER JOIN dbsys25.ferienwohnung_ausstattung"+
+" INNER JOIN dbsys36.ferienwohnung_ausstattung"+
 " ON      Ferienwohnung.ID = ferienwohnung_ausstattung.Ferienwohnung_ID"+
-" INNER JOIN dbsys25.Land"+
+" INNER JOIN dbsys36.Land"+
 " ON      Land_ID = Land.ID"+
-" INNER JOIN dbsys25.Ausstattung"+
+" INNER JOIN dbsys36.Ausstattung"+
 " ON      ferienwohnung_ausstattung.Ausstattung_ID = Ausstattung.ID"+
 " WHERE   Land.Name = '" + cboCountry.getItemAt(cboCountry.getSelectedIndex()).Land + "'"+
 " AND     Buchung.ID IS NULL" +
-" AND Ferienwohnung.Zimmer >= " + sldMinimumRooms.getValue();
+" AND Ferienwohnung.Zimmer >= " + sldMinimumRooms.getValue();*/
+		
+		String subStatement = "";
+		
+		int counter = 0;
+		if(lstFeature.getSelectedValues().length>0){
+			for(Object f : lstFeature.getSelectedValues())
+			{
+				
+				subStatement += " INNER JOIN (SELECT dbsys36.ferienwohnung_ausstattung.Ferienwohnung_ID "
+						+ " FROM dbsys36.ferienwohnung_ausstattung " 
+						+ " WHERE Ausstattung_ID IN (SELECT ID FROM dbsys36.Ausstattung WHERE beschreibung = '"+f.toString()+"')) tmp"+counter
+						+ " ON Ferienwohnung.ID = tmp" + counter + ".Ferienwohnung_ID"; 
+				
+				counter++;
+			}
+		}
+		
 
-for(Object f : lstFeature.getSelectedValues())
-{
-	SQLStatement += " AND     ausstattung.beschreibung = '" + f.toString() + "'"; 
-}
+		String SQLStatement = "SELECT DISTINCT dbsys36.Ferienwohnung.ID,Quadratmeter,dbsys36.Ferienwohnung.Name,Zimmer "
+				+ " FROM 	dbsys36.Ferienwohnung"
+				+ " LEFT JOIN (	SELECT * "
+				+ "				FROM dbsys36.Buchung "
+				+ "				WHERE "
+				+ "					(Von > '" + txtDateStart.getText() + "'" 
+				+ "					AND "
+				+ "					Von < '" +txtDateEnd.getText() + "')"
+				+ "				OR"
+				+ "					(Von+Dauer > '"+txtDateStart.getText()+"'"
+				+ "					AND"
+				+ "					Von+Dauer < '"+txtDateEnd.getText()+"')"
+				+ "				OR"
+				+ "					(Von <= '"+txtDateStart.getText()+"'"
+				+ "					AND"
+				+ "					Von+Dauer >= '"+txtDateEnd.getText()+"')"
+				+ "				) Buchung "
+				+ " ON      	Ferienwohnung.ID = Buchung.ferienwohnung_id "
+				+ " INNER JOIN	dbsys36.Land"
+				+ " ON      Land_ID = Land.ID"
+				+ subStatement
+				+ " WHERE 	Land.Name = '" + cboCountry.getItemAt(cboCountry.getSelectedIndex()).Land + "'"
+				+ " AND 	Zimmer >= " + sldMinimumRooms.getValue()
+				+ " AND		Buchung.ID IS NULL";
+		//AUsstattung
+		//Land
+		//Zimmer
+		
+
 
 
 		System.out.println(SQLStatement);
@@ -269,14 +313,24 @@ for(Object f : lstFeature.getSelectedValues())
 		{
 			int Dauer = 0;
 			
-			long start = (txtDateStart.getText());
-			long End = Date.parse(txtDateEnd.getText());
+			SimpleDateFormat formatter = new SimpleDateFormat("dd.mm.yyyy");
+	        
+	        java.util.Date start = null;
+	        java.util.Date End = null;
+			try {
+				start = formatter.parse(txtDateStart.getText());
+				End = formatter.parse(txtDateEnd.getText());
+			} catch (ParseException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+	        
+			Dauer = (int) ((End.getTime() - start.getTime())/86400000);
 			
-			Dauer = (int) (End-start)/(24*3599);
-			
-			String SQLStatement = "INSERT dbsys25.Buchung (Dauer,Von,Kunde_ID,Ferienwohnung_ID) VALUES(" + Dauer + ",'" + txtDateStart.getText() + "',1," + Data.get(tblResults.getSelectedColumn()).PK + ")";
+			String SQLStatement = "INSERT INTO dbsys36.Buchung (Dauer,Von,Kunde_ID,Ferienwohnung_ID) VALUES(" + Dauer + ",'" + txtDateStart.getText() + "',1," + Data.get(tblResults.getSelectedRow()).PK + ")";
 			System.out.println(SQLStatement);
 			con.execute(SQLStatement);
+			con.commit();
 			
 		}
 	}
@@ -370,7 +424,7 @@ for(Object f : lstFeature.getSelectedValues())
 
 	@Override
 	public void valueChanged(ListSelectionEvent e) {
-		lblSlider.setText(""+sldMinimumRooms.getValue());
+		
 		reloadResults();
 		
 	}
@@ -378,7 +432,7 @@ for(Object f : lstFeature.getSelectedValues())
 	@Override
 	public void stateChanged(ChangeEvent arg0) {
 		reloadResults();
-		
+		lblSlider.setText(""+sldMinimumRooms.getValue());
 	}
 
 }

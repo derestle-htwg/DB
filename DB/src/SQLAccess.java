@@ -12,8 +12,8 @@ public class SQLAccess {
 	public SQLAccess() {
 		try {
 			DriverManager.registerDriver(new oracle.jdbc.OracleDriver());
-			String url = "jdbc:oracle:thin:@oracle11g.in.htwg-konstanz.de:1521:ora11g"; // String f�r DB-Connection
-			conn = DriverManager.getConnection(url, "dbsys45", "dbsys45"); 						// Verbindung erstellen
+			String url = "jdbc:oracle:thin:@oracle12c.in.htwg-konstanz.de:1521:ora12c"; // String f�r DB-Connection
+			conn = DriverManager.getConnection(url, "dbsys37", "dbsys37"); 						// Verbindung erstellen
 
 			conn.setTransactionIsolation(conn.TRANSACTION_SERIALIZABLE); 				// Transaction Isolations-Level setzen
 			conn.setAutoCommit(false);
