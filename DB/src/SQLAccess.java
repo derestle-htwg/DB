@@ -21,6 +21,7 @@ public class SQLAccess {
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			
 		} 
 	}
 	
@@ -53,6 +54,7 @@ public class SQLAccess {
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			rollback();
 		}
 	}
 	
@@ -66,6 +68,7 @@ public class SQLAccess {
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			rollback();
 		}
 		return null;
 	}

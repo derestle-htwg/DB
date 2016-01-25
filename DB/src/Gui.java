@@ -191,7 +191,7 @@ public class Gui extends JFrame implements ActionListener, TableModel, ChangeLis
 		java.sql.ResultSet res = con.getData("SELECT ID,Beschreibung FROM dbsys36.Ausstattung");
 		try {
 			Vector<cFeature> liste = new Vector<Gui.cFeature>();
-			while(res.next()){
+			while(res .next()){
 				cFeature feature = new cFeature(res.getString("Beschreibung"),res.getInt("ID"));
 				liste.add(feature);
 			}
